@@ -23,10 +23,7 @@ async def router_agent(state: SharedState):
     state.add_log(f"Routing to next step based on current state.")
 
     if not state.urls_to_be_processed:
-        if need_more_context(state):
-            state.next_step = "contextual_url_generation"
-        else:
-            state.next_step = "general_url_generation"
+        state.next_step = "url_generation"
         await url_generation_agent(state)
     elif not state.articles:
         state.next_step = "scraper_selection"
@@ -42,7 +39,3 @@ async def router_agent(state: SharedState):
         await knowledge_graph_uploader_agent(state)
     else:
         state.next_step = "end"
-
-def need_more_context(state: SharedState) -> bool:
-    # Implement logic to determine if more context is needed
-    return False  # Placeholder

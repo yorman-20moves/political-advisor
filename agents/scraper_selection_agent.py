@@ -13,6 +13,7 @@
 
 from models.state import SharedState
 import re
+from agents.scraping_agent import scraping_agent
 
 async def scraper_selection_agent(state: SharedState):
     state.add_log("Selecting appropriate scrapers for each URL.")

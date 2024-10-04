@@ -29,10 +29,12 @@ async def scraping_agent(state: SharedState):
     state.add_log(f"Scraped {len(state.articles)} articles.")
 
 async def scrape_with_jina(url: str, state: SharedState):
-    scraper = JinaScraper()
+    scraper = JinaScraper(api_key=state.config.JINA_API_KEY)
     content = await scraper.scrape(url)
     if content:
         state.articles[url] = content
+    else:
+        state.add_log(f"Failed to scrape {url} with JinaScraper.")
 
 async def scrape_with_web_base_loader(url: str, state: SharedState):
     scraper = WebBaseLoaderScraper()
