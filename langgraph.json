@@ -1,0 +1,7 @@
+{
+    "name": "MyAgentApp",
+    "entrypoint": "my_agent/agent.py",
+    "dependencies": [
+      "my_agent/utils"
+    ]
+  }  

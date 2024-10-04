@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Agent App</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>My Agent App</h1>
+    <form id="query-form">
+        <label for="query">Enter your query:</label><br>
+        <input type="text" id="query" name="query" size="80" required pattern=".{3,}" title="Please enter at least 3 characters."><br><br>
+        <input type="submit" value="Submit">
+    </form>
+    <h2>Logs:</h2>
+    <div id="log-container" style="background-color: #f4f4f4; padding: 10px;"></div>
+
+    <script>
+        const form = document.getElementById('query-form');
+        const logContainer = document.getElementById('log-container');
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            logContainer.innerHTML = '';
+            
+            const formData = new FormData(form);
+            
+            fetch('/start', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('Response from /start:', response);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Session ID:', data.session_id);
+                const sessionId = data.session_id;
+                const eventSource = new EventSource(`/stream?session_id=${sessionId}`);
+                eventSource.onmessage = function(e) {
+                    if (e.data === "END") {
+                        eventSource.close();
+                    } else {
+                        logContainer.innerHTML += e.data + "<br>";
+                    }
+                };
+                eventSource.onerror = function(e) {
+                    console.error('EventSource failed:', e);
+                    eventSource.close();
+                };
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                logContainer.innerHTML = 'An error occurred. Please try again.';
+            });
+        });
+    </script>
+</body>
+</html>

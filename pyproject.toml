@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "political-advisor"
+version = "0.1.0"
+description = ""
+authors = ["yorman-20moves <108899653+yorman-20moves@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+langgraph = "^0.2.34"
+langchain = "^0.3.2"
+langchain-core = "^0.3.8"
+openai = "^1.51.0"
+beautifulsoup4 = "^4.12.3"
+jinja2 = "^3.1.4"
+neo4j = "^5.25.0"
+requests = "^2.32.3"
+httpx = "^0.27.2"
+python-dotenv = "^1.0.1"
+flask = "^3.0.3"
+jsonschema = "^4.23.0"
+markupsafe = "^2.1.5"
+langchain-community = "^0.3.1"
+langchain-openai = "^0.2.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
