@@ -23,6 +23,7 @@ markupsafe = "^2.1.5"
 langchain-community = "^0.3.1"
 langchain-openai = "^0.2.1"
 aiohttp = "^3.10.9"
+fastapi = "^0.115.0"
 
 
 [build-system]

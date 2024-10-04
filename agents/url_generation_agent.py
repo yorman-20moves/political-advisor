@@ -14,101 +14,140 @@
 # - Updates `search_terms` in the state with the generated search terms.
 # - Updates `urls_to_be_processed` in the state with the list of generated URLs.
 
+import asyncio
+import logging
 from models.state import SharedState
 from tools.searching.google_cse import GoogleCSE
 from tools.searching.tavily_search import TavilySearch
 from prompts.search_term_generation_prompt import SEARCH_TERM_GENERATION_PROMPT
 from prompts.search_agent_selection_prompt import SEARCH_AGENT_SELECTION_PROMPT
 import openai
+import json
+
+logger = logging.getLogger(__name__)
 
 async def url_generation_agent(state: SharedState):
-    # Generate 5 search terms using LLM
-    search_terms = await generate_search_terms(state.user_query, state.config)
-    state.search_terms = search_terms
+    try:
+        # Generate 5 search terms using LLM
+        search_terms = await generate_search_terms(state.user_query, state.config, state)
+        state.search_terms = search_terms
 
-    # Decide whether to use general or contextual agent using LLM
-    agent_choice = await decide_search_agent(state.user_query, search_terms, state.config)
-    if agent_choice == "Contextual":
-        state.add_log("Decided to use Contextual URL Generation Agent.")
-        await contextual_url_generation_agent(state)
-    else:
-        state.add_log("Decided to use General URL Generation Agent.")
-        await general_url_generation_agent(state)
+        if not search_terms:
+            state.add_log("No search terms could be generated.", level="ERROR")
+            state.next_step = "end"
+            return
 
-async def generate_search_terms(user_query: str, config):
-    prompt = SEARCH_TERM_GENERATION_PROMPT.format(query=user_query)
-    # Call LLM to generate search terms
-    openai.api_key = config.OPENAI_API_KEY
-    openai.api_base = config.OPENAI_API_BASE
-    response = await openai.ChatCompletion.acreate(
-        model=config.LLM_MODEL_NAME,
-        messages=[
-            {"role": "system", "content": "You are an assistant that generates effective search terms based on user queries."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=config.LLM_TEMPERATURE,
-        max_tokens=50,
-        n=1,
-    )
-    search_terms_text = response.choices[0].message['content'].strip()
-    # Parse the response to get a list of search terms
-    if "No search terms could be generated." in search_terms_text:
+        # Decide whether to use general or contextual agent using LLM
+        agent_choice = await decide_search_agent(state.user_query, search_terms, state.config, state)
+        if agent_choice == "Contextual":
+            state.add_log("Decided to use Contextual URL Generation Agent.", level="INFO")
+            await contextual_url_generation_agent(state)
+        else:
+            state.add_log("Decided to use General URL Generation Agent.", level="INFO")
+            await general_url_generation_agent(state)
+    except Exception as e:
+        state.add_log(f"Error in url_generation_agent: {e}", level="ERROR")
+        logger.error(f"Error in url_generation_agent: {e}")
+
+async def generate_search_terms(user_query: str, config, state: SharedState):
+    try:
+        prompt = SEARCH_TERM_GENERATION_PROMPT.format(query=user_query)
+        # Call LLM to generate search terms
+        openai.api_key = config.OPENAI_API_KEY
+        openai.api_base = config.OPENAI_API_BASE
+        response = await openai.ChatCompletion.acreate(
+            model=config.LLM_MODEL_NAME,
+            messages=[
+                {"role": "system", "content": "You are an assistant that generates effective search terms based on user queries."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=config.LLM_TEMPERATURE,
+            max_tokens=50,
+            n=1,
+        )
+        search_terms_text = response.choices[0].message['content'].strip()
+        # Parse the response to get a list of search terms
+        if "No search terms could be generated." in search_terms_text:
+            return []
+        search_terms = [term.strip() for term in search_terms_text.split(',') if term.strip()]
+        return search_terms
+    except Exception as e:
+        state.add_log(f"Error in generate_search_terms: {e}", level="ERROR")
+        logger.error(f"Error in generate_search_terms: {e}")
         return []
-    search_terms = [term.strip() for term in search_terms_text.split(',') if term.strip()]
-    return search_terms
 
-async def decide_search_agent(user_query: str, search_terms: list, config):
-    # Prepare the prompt with the descriptions
-    tavily_description = """Tavily Search API is a specialized search engine optimized for AI agents and LLMs. It aggregates information from multiple online sources, using proprietary AI to score, filter, and rank the most relevant content for a given query or task. Tavily offers customizable search depths, domain management, and the ability to parse HTML content. It provides real-time, trusted information and can include short answers for cross-agent communication, making it particularly useful for RAG applications and AI-driven research tasks."""
-    
-    google_cse_description = """The New York Politics News Aggregator is a custom Google search engine focused on retrieving relevant news articles about New York politics from a curated list of sources. It covers comprehensive citywide news outlets, local borough-specific media, Black and Latino media, and official newsrooms from New York State and City government entities. This search engine is specifically tailored to provide targeted results from authoritative sources on New York political news, making it ideal for queries related to local and state politics in the New York area."""
+async def decide_search_agent(user_query: str, search_terms: list, config, state: SharedState):
+    try:
+        # Prepare the prompt with the descriptions
+        tavily_description = """[Tavily description here]"""
+        google_cse_description = """[Google CSE description here]"""
 
-    # Create the prompt
-    prompt = SEARCH_AGENT_SELECTION_PROMPT.format(
-        user_query=user_query,
-        search_terms=", ".join(search_terms),
-        tavily_description=tavily_description,
-        google_cse_description=google_cse_description
-    )
+        # Create the prompt
+        prompt = SEARCH_AGENT_SELECTION_PROMPT.format(
+            user_query=user_query,
+            search_terms=", ".join(search_terms),
+            tavily_description=tavily_description,
+            google_cse_description=google_cse_description
+        )
 
-    # Call LLM to decide which agent to use
-    response = await openai.ChatCompletion.acreate(
-        model=config.LLM_MODEL_NAME,
-        messages=[
-            {"role": "system", "content": "You are an assistant that decides which search engine is better suited for a given query based on their descriptions."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=config.LLM_TEMPERATURE,
-        max_tokens=10,
-        n=1,
-    )
-    decision_text = response.choices[0].message['content'].strip()
+        # Call LLM to decide which agent to use
+        response = await openai.ChatCompletion.acreate(
+            model=config.LLM_MODEL_NAME,
+            messages=[
+                {"role": "system", "content": "You are an assistant that decides which search engine is better suited for a given query based on their descriptions."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=config.LLM_TEMPERATURE,
+            max_tokens=10,
+            n=1,
+        )
+        decision_text = response.choices[0].message['content'].strip()
 
-    if "Contextual" in decision_text:
-        return "Contextual"
-    else:
-        return "General"
+        if "Contextual" in decision_text:
+            return "Contextual"
+        else:
+            return "General"
+    except Exception as e:
+        state.add_log(f"Error in decide_search_agent: {e}", level="ERROR")
+        logger.error(f"Error in decide_search_agent: {e}")
+        return "General"  # Default to General if error occurs
 
 async def general_url_generation_agent(state: SharedState):
-    state.add_log("Starting general URL generation using Google CSE.")
+    state.add_log("Starting general URL generation using Google CSE.", level="INFO")
     search_terms = state.search_terms
     urls = []
-    for term in search_terms:
-        cse = GoogleCSE(api_key=state.config.GOOGLE_CSE_API_KEY, cx=state.config.GOOGLE_CSE_CX)
-        results = await cse.search(term)
-        urls.extend(results)
+    semaphore = asyncio.Semaphore(5)  # Limit concurrency to 5
+    async def fetch_urls(term):
+        async with semaphore:
+            cse = GoogleCSE(api_key=state.config.GOOGLE_CSE_API_KEY, cx=state.config.GOOGLE_CSE_CX)
+            try:
+                results = await cse.search(term)
+                urls.extend(results)
+            except Exception as e:
+                state.add_log(f"Error during Google CSE search for term '{term}': {e}", level="ERROR")
+
+    tasks = [fetch_urls(term) for term in search_terms]
+    await asyncio.gather(*tasks)
     # Limit to 15 URLs
-    state.urls_to_be_processed = list(set(urls))[:15]  # Remove duplicates and limit to 15
-    state.add_log(f"Generated {len(state.urls_to_be_processed)} URLs.")
+    state.urls_to_be_processed = list(set(urls))[:15]
+    state.add_log(f"Generated {len(state.urls_to_be_processed)} URLs.", level="INFO")
 
 async def contextual_url_generation_agent(state: SharedState):
-    state.add_log("Starting contextual URL generation using Tavily API.")
+    state.add_log("Starting contextual URL generation using Tavily API.", level="INFO")
     search_terms = state.search_terms
     urls = []
-    for term in search_terms:
-        tavily = TavilySearch(api_key=state.config.TAVILY_API_KEY)
-        results = await tavily.search(term)
-        urls.extend(results)
+    semaphore = asyncio.Semaphore(5)  # Limit concurrency to 5
+    async def fetch_urls(term):
+        async with semaphore:
+            tavily = TavilySearch(api_key=state.config.TAVILY_API_KEY)
+            try:
+                results = await tavily.search(term)
+                urls.extend(results)
+            except Exception as e:
+                state.add_log(f"Error during Tavily search for term '{term}': {e}", level="ERROR")
+
+    tasks = [fetch_urls(term) for term in search_terms]
+    await asyncio.gather(*tasks)
     # Limit to 15 URLs
-    state.urls_to_be_processed = list(set(urls))[:15]  # Remove duplicates and limit to 15
-    state.add_log(f"Generated {len(state.urls_to_be_processed)} URLs.")
+    state.urls_to_be_processed = list(set(urls))[:15]
+    state.add_log(f"Generated {len(state.urls_to_be_processed)} URLs.", level="INFO")

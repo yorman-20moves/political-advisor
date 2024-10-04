@@ -14,12 +14,19 @@
 # - Updated state reflecting the current progress of the workflow.
 # - Provides methods to log messages and reset the state.
 
-from typing import List, Optional, Dict
+# File: state.py
+# Directory: my_app/models/
+
+import logging
+from typing import List, Dict
 from pydantic import BaseModel
 from config.config import Config
 
+logger = logging.getLogger(__name__)
+
 class SharedState(BaseModel):
-    search_terms: List[str]
+    search_terms: List[str] = []
+    user_query: str = ""
     urls_to_be_processed: List[str] = []
     scraper_choices: Dict[str, str] = {}  # URL to scraper mapping
     articles: Dict[str, str] = {}  # URL to article content
@@ -30,11 +37,25 @@ class SharedState(BaseModel):
     logs: List[str] = []
     config: Config = None  # Configuration object
 
-    def add_log(self, message: str):
-        self.logs.append(message)
-        print(message)  # For demonstration purposes
+    def add_log(self, message: str, level: str = "INFO"):
+        self.logs.append(f"{level}: {message}")
+        # Log with appropriate severity
+        if level == "DEBUG":
+            logger.debug(message)
+        elif level == "INFO":
+            logger.info(message)
+        elif level == "WARNING":
+            logger.warning(message)
+        elif level == "ERROR":
+            logger.error(message)
+        elif level == "CRITICAL":
+            logger.critical(message)
+        else:
+            logger.info(message)
 
     def reset(self):
+        self.search_terms = []
+        self.user_query = ""
         self.urls_to_be_processed = []
         self.scraper_choices = {}
         self.articles = {}
