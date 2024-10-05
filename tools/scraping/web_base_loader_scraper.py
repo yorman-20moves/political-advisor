@@ -11,7 +11,7 @@
 # Expected Outputs:
 # - Extracted content from the webpage, potentially including structured data.
 
-from langchain.document_loaders import WebBaseLoader
+from langchain_community.document_loaders import WebBaseLoader
 
 class WebBaseLoaderScraper:
     def __init__(self):

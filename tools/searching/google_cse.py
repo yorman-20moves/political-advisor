@@ -15,6 +15,7 @@
 import aiohttp
 import logging
 import asyncio
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ class GoogleCSE:
         self.api_key = api_key
         self.cx = cx
 
-    async def search(self, query: str) -> list:
+    async def search(self, query: str) -> List[str]:
         url = "https://www.googleapis.com/customsearch/v1"
         params = {
             "key": self.api_key,
@@ -34,14 +35,8 @@ class GoogleCSE:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params, timeout=10) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        results = [item["link"] for item in data.get("items", [])]
-                        return results
-                    else:
-                        error_data = await response.text()
-                        logger.error(f"Google CSE API error ({response.status}): {error_data}")
-                        return []
+                    data = await response.json()
+                    return [item['link'] for item in data.get('items', [])]
         except asyncio.TimeoutError:
             logger.error("Google CSE API request timed out.")
             return []

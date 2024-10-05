@@ -19,7 +19,7 @@ import asyncio
 import json
 import logging
 from models.state import SharedState
-from prompts.article_extraction_prompt import get_article_extraction_prompt
+from prompts.article_extraction_prompt import ARTICLE_EXTRACTION_SYSTEM_PROMPT, ARTICLE_EXTRACTION_HUMAN_PROMPT
 import openai
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,11 @@ async def article_extraction_agent(state: SharedState):
 
 async def extract_article_data(url: str, content: str, state: SharedState, semaphore):
     async with semaphore:
-        prompt_messages = get_article_extraction_prompt(url, content)
+        # Generate the prompt messages
+        prompt_messages = [
+            {"role": "system", "content": ARTICLE_EXTRACTION_SYSTEM_PROMPT},
+            {"role": "user", "content": ARTICLE_EXTRACTION_HUMAN_PROMPT.format(url=url, article_text=content)}
+        ]
         extracted_data = await call_llm(prompt_messages, state.config, state)
         if extracted_data:
             state.extracted_data[url] = extracted_data
@@ -45,7 +49,6 @@ async def extract_article_data(url: str, content: str, state: SharedState, semap
 async def call_llm(prompt_messages: list, config, state: SharedState):
     try:
         openai.api_key = config.OPENAI_API_KEY
-        openai.api_base = config.OPENAI_API_BASE
         response = await openai.ChatCompletion.acreate(
             model=config.LLM_MODEL_NAME,
             messages=prompt_messages,

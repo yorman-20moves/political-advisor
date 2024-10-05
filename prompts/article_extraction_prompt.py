@@ -73,25 +73,25 @@ Summary: One-sentence summary of the controversy.
 Description: Detailed explanation.
 Controversy Type: Specify "Legal", "Social", or "Moral".
 8. Institutions:
-Name: Name of the institution 
-Type: Whether the type of institution is an (executive, legislative, or judicial branch of a federal, state, or local) governmental institution, or a (financial, healthcare, environmental, or market and consumer protection) regulatory institution, or a (monetary, fiscal policy, labor, economic development, or social safety net) economic institution, or a (political party, electoral, or lobbying and advocacy) political institution, or a (public university, private university, research, or think tank) education and research institution, or a (religious, healthcare, non-governmental organization, welfare) social institution, or a (military branch or intelligence) military institution. 
+Name: Name of the institution
+Type: Whether the type of institution is an (executive, legislative, or judicial branch of a federal, state, or local) governmental institution, or a (financial, healthcare, environmental, or market and consumer protection) regulatory institution, or a (monetary, fiscal policy, labor, economic development, or social safety net) economic institution, or a (political party, electoral, or lobbying and advocacy) political institution, or a (public university, private university, research, or think tank) education and research institution, or a (religious, healthcare, non-governmental organization, welfare) social institution, or a (military branch or intelligence) military institution.
 Output Format (JSON):
 
 Ensure your output strictly adheres to the following JSON structure:
 
 json
 Copy code
-{
-  "Article": {
+{{
+  "Article": {{
     "Title": "Title of the article",
     "URL": "URL of the article",
     "Date Published": "mm/dd/yyyy"
-  },
+  }},
   "Stakeholders": [
-    {
+    {{
       "Name": "Name of the Stakeholder",
       "Type": "Person or Organization",
-      "Relationships": {
+      "Relationships": {{
         "mentioned_in": "Title of the article",
         "is_employed_by": "name of the organization the person works for",
         "has_role_in": "name of the institution the person has a role in",
@@ -99,64 +99,64 @@ Copy code
         "is_author": "Name of the author (if applicable)",
         "participated_in": ["Event Title 1", "Event Title 2"],
         "related_to": "Related Controversy"
-      },
+      }},
       "Quotes": [
-        {
+        {{
           "Text": "Quote text",
           "Date Recorded": "mm/dd/yyyy",
           "Context": "Context explaining why the quote was used."
-        }
+        }}
       ]
-    }
+    }}
     // Additional stakeholders...
   ],
   "Events": [
-    {
+    {{
       "Title": "Event Title",
       "Date": "mm/dd/yyyy",
       "Description": "Description of the event",
       "Participants": ["Participant 1", "Participant 2"]
-    }
+    }}
     // Additional events...
   ],
   "Facts": [
-    {
+    {{
       "Fact": "The fact itself",
       "Summary": "One-sentence summary of the fact",
       "Description": "Full description of the fact"
-    }
+    }}
     // Additional facts...
   ],
   "Issues": [
-    {
+    {{
       "Title": "Issue title",
       "Objective": "Objective of the issue"
-    }
+    }}
     // Additional issues...
   ],
   "Documents": [
-    {
+    {{
       "Document Title": "Title of the document",
       "Description": "Reason why the document was mentioned"
-    }
+    }}
     // Additional documents...
   ],
   "Controversies": [
-    {
+    {{
       "Summary": "One-sentence summary of the controversy",
       "Description": "Full description of the controversy",
       "Controversy Type": "Legal, Social, or Moral"
-    }
+    }}
     // Additional controversies...
   ],
   "Institutions": [
-    {
-      "Name": "Name of the institution"
+    {{
+      "Name": "Name of the institution",
       "Type": "Type of institution"
-    }
+    }}
     // Additional institutions...
   ]
-}
+}}
 
 Instructions and Guidelines:
 Strict Adherence to Format: Follow the JSON structure exactly as provided. Do not include any text outside the JSON code block.

@@ -19,7 +19,7 @@
 
 import logging
 from typing import List, Dict
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from config.config import Config
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,8 @@ class SharedState(BaseModel):
     next_step: str = "url_generation"
     logs: List[str] = []
     config: Config = None  # Configuration object
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def add_log(self, message: str, level: str = "INFO"):
         self.logs.append(f"{level}: {message}")

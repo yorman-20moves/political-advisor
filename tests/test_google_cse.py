@@ -12,50 +12,54 @@ Variables Used:
 - Mocked API responses for success and error cases.
 """
 
-import asyncio
-import unittest
-from unittest.mock import patch, AsyncMock
+import pytest
+from unittest.mock import AsyncMock, patch
 from tools.searching.google_cse import GoogleCSE
+import asyncio
 
-class TestGoogleCSE(unittest.IsolatedAsyncioTestCase):
-
+class TestGoogleCSE:
+    @pytest.mark.asyncio
     async def test_successful_search(self):
         async def mock_get(*args, **kwargs):
-            class MockResponse:
-                status = 200
-                async def json(self):
-                    return {
-                        "items": [
-                            {"link": "http://example.com/1"},
-                            {"link": "http://example.com/2"},
-                        ]
-                    }
-            return MockResponse()
-        
+            mock_response = AsyncMock()
+            mock_response.status = 200
+            mock_response.__aenter__.return_value = mock_response
+            mock_response.json.return_value = {
+                "items": [
+                    {"link": "http://example.com/1"},
+                    {"link": "http://example.com/2"}
+                ]
+            }
+            return mock_response
+
         with patch('aiohttp.ClientSession.get', new=mock_get):
             cse = GoogleCSE(api_key='test_key', cx='test_cx')
             results = await cse.search('test query')
-            self.assertEqual(results, ['http://example.com/1', 'http://example.com/2'])
+            assert results == ['http://example.com/1', 'http://example.com/2']
 
+    @pytest.mark.asyncio
     async def test_api_error(self):
         async def mock_get(*args, **kwargs):
-            class MockResponse:
-                status = 403
-                async def text(self):
-                    return "Forbidden"
-            return MockResponse()
-        
+            mock_response = AsyncMock()
+            mock_response.status = 500
+            mock_response.__aenter__.return_value = mock_response
+            mock_response.json.return_value = {"error": "API Error"}
+            return mock_response
+
         with patch('aiohttp.ClientSession.get', new=mock_get):
             cse = GoogleCSE(api_key='test_key', cx='test_cx')
             results = await cse.search('test query')
-            self.assertEqual(results, [])
+            assert results == []
 
+    @pytest.mark.asyncio
     async def test_timeout(self):
-        with patch('aiohttp.ClientSession.get', new_callable=AsyncMock) as mock_get:
-            mock_get.side_effect = asyncio.TimeoutError
+        async def mock_get(*args, **kwargs):
+            raise asyncio.TimeoutError()
+
+        with patch('aiohttp.ClientSession.get', side_effect=mock_get):
             cse = GoogleCSE(api_key='test_key', cx='test_cx')
             results = await cse.search('test query')
-            self.assertEqual(results, [])
+            assert results == []
 
 if __name__ == '__main__':
-    unittest.main()
+    pytest.main()

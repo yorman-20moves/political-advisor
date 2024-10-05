@@ -12,24 +12,30 @@ Variables Used:
 - Mocked OpenAI API responses.
 """
 
-import unittest
-from unittest.mock import patch, AsyncMock
-from models.state import SharedState
-from config.config import Config
+import pytest
+from unittest.mock import AsyncMock, patch
 from agents.article_extraction_agent import article_extraction_agent
+from models.state import SharedState
 
-class TestArticleExtractionAgent(unittest.IsolatedAsyncioTestCase):
-
+class TestArticleExtractionAgent:
+    @pytest.mark.asyncio
     async def test_article_extraction(self):
         state = SharedState()
-        state.articles = {'http://example.com': 'Article content'}
-        state.config = Config()
-        # Mock OpenAI responses
-        with patch('openai.ChatCompletion.acreate', new_callable=AsyncMock) as mock_openai:
-            mock_openai.return_value = AsyncMock(choices=[AsyncMock(message={'content': '{"key": "value"}'})])
+        state.urls_to_be_processed = ["http://example.com"]
+        state.scraper_choices = {"http://example.com": "some_scraper"}
+
+        mock_scraper = AsyncMock()
+        mock_scraper.return_value = "Mocked article content"
+
+        mock_openai_response = AsyncMock()
+        mock_openai_response.choices[0].message.content = '{"Article": {"Title": "Test Article", "URL": "http://example.com", "Date Published": "01/01/2023"}}'
+
+        with patch('agents.article_extraction_agent.scrape_article', new=mock_scraper), \
+             patch('openai.AsyncOpenAI.chat.completions.create', return_value=mock_openai_response):
             await article_extraction_agent(state)
-            self.assertIn('http://example.com', state.extracted_data)
-            self.assertEqual(state.extracted_data['http://example.com'], {'key': 'value'})
+
+        assert "http://example.com" in state.extracted_data
+        assert state.extracted_data["http://example.com"]["Article"]["Title"] == "Test Article"
 
 if __name__ == '__main__':
-    unittest.main()
+    pytest.main()
