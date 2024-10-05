@@ -23,7 +23,7 @@ class TestWorkflow:
     async def test_full_workflow(self):
         state = SharedState()
         state.user_query = "Test query"
-        state.config = config()
+        state.config = config
         state.next_step = "url_generation"  # Set initial step
 
         # Mock all agent functions

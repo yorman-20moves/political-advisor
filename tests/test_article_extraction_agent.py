@@ -16,26 +16,39 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from agents.article_extraction_agent import article_extraction_agent
 from models.state import SharedState
+from config import config  # Import Config if it's a class, or import necessary config values
 
 class TestArticleExtractionAgent:
     @pytest.mark.asyncio
     async def test_article_extraction(self):
+        # Setup
         state = SharedState()
-        state.urls_to_be_processed = ["http://example.com"]
-        state.scraper_choices = {"http://example.com": "some_scraper"}
+        state.articles = {
+            "http://example.com": "This is a test article content."
+        }
+        state.config = config  # If Config is a class, or use a dict if it's not
+        state.config.OPENAI_API_KEY = "test_api_key"
+        state.config.LLM_MODEL_NAME = "gpt-3.5-turbo"
+        state.config.LLM_TEMPERATURE = 0.7
+        state.config.LLM_MAX_TOKENS = 1000
 
-        mock_scraper = AsyncMock()
-        mock_scraper.return_value = "Mocked article content"
-
+        # Mock OpenAI API response
         mock_openai_response = AsyncMock()
-        mock_openai_response.choices[0].message.content = '{"Article": {"Title": "Test Article", "URL": "http://example.com", "Date Published": "01/01/2023"}}'
+        mock_openai_response.choices = [
+            AsyncMock(message={
+                'content': '{"Article": {"Title": "Test Article", "URL": "http://example.com", "Date Published": "01/01/2023"}}'
+            })
+        ]
 
-        with patch('agents.article_extraction_agent.scrape_article', new=mock_scraper), \
-             patch('openai.AsyncOpenAI.chat.completions.create', return_value=mock_openai_response):
+        # Patch the OpenAI API call
+        with patch('openai.ChatCompletion.acreate', return_value=mock_openai_response):
             await article_extraction_agent(state)
 
+        # Assertions
         assert "http://example.com" in state.extracted_data
         assert state.extracted_data["http://example.com"]["Article"]["Title"] == "Test Article"
+        assert state.extracted_data["http://example.com"]["Article"]["URL"] == "http://example.com"
+        assert state.extracted_data["http://example.com"]["Article"]["Date Published"] == "01/01/2023"
 
 if __name__ == '__main__':
     pytest.main()
